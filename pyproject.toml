@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docshield"
+version = "0.1.0"
+description = "High-Performance Image Anonymization & PII Redactor for sensitive documents and images"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "DocShield Team", email = "dev@docshield.ai" }
+]
+keywords = [
+    "computer-vision",
+    "pii-redaction",
+    "privacy",
+    "gdpr",
+    "anonymization",
+    "face-blur",
+    "document-processing",
+    "opencv",
+    "fastapi"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Security",
+]
+dependencies = [
+    "opencv-python-headless>=4.8.0",
+    "numpy>=1.24.0",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.5.0",
+    "python-multipart>=0.0.9",
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    "pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+docshield = "docshield.cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["docshield*"]
+
+[tool.setuptools.package-data]
+docshield = ["data/haarcascades/*.xml"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+pythonpath = ["."]
