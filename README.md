@@ -94,7 +94,7 @@ DocShield leverages vectorized matrix operations across NumPy and OpenCV's C++ c
 
 ### From Source
 ```bash
-git clone https://github.com/docshield/docshield.git
+git clone https://github.com/aqua-forte/docshield.git
 cd docshield
 pip install -e .
 ```
