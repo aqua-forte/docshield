@@ -9,7 +9,7 @@ __author__ = "DocShield Team"
 __license__ = "MIT"
 
 from docshield.core.detector import FaceDetector, PIIDetector, TextRegionDetector
-from docshield.core.redactor import ImageRedactor, decode_image, encode_image
+from docshield.core.redactor import ImageRedactor, decode_image, encode_image, read_image, write_image
 from docshield.core.types import BoundingBox, DetectionResult, PIIType, RedactMode
 
 __all__ = [
@@ -24,4 +24,6 @@ __all__ = [
     "ImageRedactor",
     "encode_image",
     "decode_image",
+    "read_image",
+    "write_image",
 ]

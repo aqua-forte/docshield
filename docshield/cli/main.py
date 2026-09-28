@@ -23,7 +23,7 @@ from rich.progress import (
 from rich.table import Table
 
 from docshield.core.detector import PIIDetector
-from docshield.core.redactor import ImageRedactor
+from docshield.core.redactor import ImageRedactor, read_image, write_image
 from docshield.core.types import RedactMode
 
 app = typer.Typer(
@@ -163,8 +163,8 @@ def redact(
             dest_path = output_targets[file_path]
             progress.update(task, description=f"[cyan]Processing: {file_path.name}")
 
-            # Read image with OpenCV
-            img = cv2.imread(str(file_path))
+            # Read image safely (supports Unicode/Cyrillic paths)
+            img = read_image(file_path)
             if img is None:
                 console.print(f"[red]Warning: Could not read image '{file_path}'. Skipping.[/red]")
                 progress.advance(task)
@@ -185,9 +185,8 @@ def redact(
                 intensity=pixel_size if mode == RedactMode.PIXELATE else blur_intensity,
             )
 
-            # Save clean image
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            cv2.imwrite(str(dest_path), clean_img)
+            # Save clean image safely (supports Unicode/Cyrillic paths)
+            write_image(dest_path, clean_img)
 
             total_faces += detection.face_count
             total_text += detection.text_count

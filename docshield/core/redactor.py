@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import cv2
@@ -196,3 +197,32 @@ def decode_image(data: bytes) -> np.ndarray:
         raise ValueError("Failed to decode image from provided byte stream.")
 
     return image
+
+
+def read_image(path: Union[str, Path]) -> Optional[np.ndarray]:
+    """Read an image from disk safely supporting non-ASCII / Unicode paths on Windows/Linux."""
+    p = Path(path)
+    if not p.is_file():
+        return None
+    try:
+        with open(p, "rb") as f:
+            data = f.read()
+        return decode_image(data)
+    except Exception:
+        return None
+
+
+def write_image(path: Union[str, Path], image: np.ndarray, quality: int = 95) -> bool:
+    """Write an image to disk safely supporting non-ASCII / Unicode paths on Windows/Linux."""
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fmt = p.suffix.lower().lstrip(".")
+    if not fmt:
+        fmt = "jpeg"
+    try:
+        data = encode_image(image, format=fmt, quality=quality)
+        with open(p, "wb") as f:
+            f.write(data)
+        return True
+    except Exception:
+        return False
