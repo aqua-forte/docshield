@@ -248,17 +248,20 @@ class TextRegionDetector:
         # Find external contours
         contours, _ = cv2.findContours(connected, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+        max_line_h = max(35, int(h_img * 0.08))
+        max_line_w = int(w_img * 0.95)
+
         raw_boxes: List[BoundingBox] = []
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
             area = w * h
 
-            # Filter out minuscule noise or gigantic artifacts covering the full page
+            # Filter out minuscule noise or artifacts covering entire page/large background
             if (
                 w >= self.min_width
-                and h >= self.min_height
+                and self.min_height <= h <= max_line_h
                 and area >= self.min_area
-                and area < (total_pixels * 0.90)
+                and area < (total_pixels * 0.15)
             ):
                 # Apply padding with edge clamping
                 px = max(0, x - self.padding)
@@ -277,40 +280,53 @@ class TextRegionDetector:
                     )
                 )
 
-        # Merge overlapping/adjacent text boxes
-        return self._merge_overlapping_boxes(raw_boxes)
+        # Merge overlapping/adjacent text boxes within text lines
+        return self._merge_overlapping_boxes(raw_boxes, max_h=max_line_h * 2, max_w=max_line_w)
 
     @staticmethod
-    def _merge_overlapping_boxes(boxes: List[BoundingBox], iou_thresh: float = 0.1) -> List[BoundingBox]:
-        """Merge overlapping bounding boxes to create clean redaction zones."""
+    def _merge_overlapping_boxes(
+        boxes: List[BoundingBox],
+        iou_thresh: float = 0.15,
+        max_h: int = 150,
+        max_w: int = 2000,
+    ) -> List[BoundingBox]:
+        """Merge overlapping bounding boxes along horizontal text lines."""
         if not boxes:
             return []
 
-        # Sort boxes by top-left coordinate (y, then x)
-        sorted_boxes = sorted(boxes, key=lambda b: (b.y, b.x))
+        # Sort boxes primarily by vertical band then x
+        sorted_boxes = sorted(boxes, key=lambda b: (b.y // 15, b.x))
         merged: List[BoundingBox] = []
 
         for box in sorted_boxes:
             matched = False
             for i, existing in enumerate(merged):
-                # Check for overlap or containment
-                if existing.iou(box) > iou_thresh or TextRegionDetector._boxes_intersect(existing, box):
-                    # Combine coordinates
+                iou = existing.iou(box)
+                # Check horizontal line continuity
+                same_line = abs(existing.y - box.y) <= 15 and abs(existing.height - box.height) <= 20
+                h_dist = min(abs(box.x - existing.x2), abs(existing.x - box.x2))
+                h_overlap = (box.x <= existing.x2 and box.x2 >= existing.x)
+
+                if iou > iou_thresh or (same_line and (h_dist <= 25 or h_overlap)):
                     nx = min(existing.x, box.x)
                     ny = min(existing.y, box.y)
                     nx2 = max(existing.x2, box.x2)
                     ny2 = max(existing.y2, box.y2)
+                    nw = nx2 - nx
+                    nh = ny2 - ny
 
-                    merged[i] = BoundingBox(
-                        x=nx,
-                        y=ny,
-                        width=nx2 - nx,
-                        height=ny2 - ny,
-                        label=PIIType.TEXT.value,
-                        confidence=max(existing.confidence, box.confidence),
-                    )
-                    matched = True
-                    break
+                    # Ensure merged box remains a plausible text segment
+                    if nh <= max_h and nw <= max_w:
+                        merged[i] = BoundingBox(
+                            x=nx,
+                            y=ny,
+                            width=nw,
+                            height=nh,
+                            label=PIIType.TEXT.value,
+                            confidence=max(existing.confidence, box.confidence),
+                        )
+                        matched = True
+                        break
 
             if not matched:
                 merged.append(box)
